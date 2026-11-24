@@ -1,10 +1,10 @@
-// GILOK service worker
-// 앱을 업데이트할 때마다 아래 버전 숫자를 하나씩 올려 주세요. (gilok-v1 → gilok-v2)
-const CACHE = 'gilok-v1';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
+// GILOK service worker — 이 파일도 다시 바꿀 필요가 없어요.
+// 인터넷이 되면 항상 최신 파일을, 안 되면 저장해 둔 파일로 열어요.
+const CACHE = 'gilok-files';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
   self.skipWaiting();
 });
 
@@ -16,17 +16,19 @@ self.addEventListener('activate', e => {
   );
 });
 
-// 인터넷이 되면 항상 최신 파일, 안 되면 저장해 둔 파일로 열어요.
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-store' })
       .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+        }
         return res;
       })
-      .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+      .catch(() => caches.match(req, { ignoreSearch: true })
+        .then(r => r || caches.match('./index.html')))
   );
 });
